@@ -1,0 +1,2 @@
+"ats_readiness_score": 0-100,
+"ats_readiness_notes": "brief assessment of how well CV will perform in automated screening systems"

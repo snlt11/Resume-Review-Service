@@ -6,10 +6,12 @@ AI-powered resume analysis service that evaluates candidate resumes against job 
 
 - **Multi-format support**: PDF, DOCX, and TXT files (up to 10MB)
 - **Structured analysis**: Returns JSON with detailed scores, evidence, strengths/weaknesses, and tailored interview questions
+- **Conditional CV Improvement**: Provides detailed, actionable suggestions for resume enhancement, which can be enabled or disabled.
 - **Gemini 2.5 Pro integration**: Uses latest Gemini AI model for intelligent resume evaluation
 - **Robust parsing**: Handles various response formats with automatic code fence removal
 - **Production-ready**: Complete error handling, input validation, and security best practices
 - **Development-friendly**: Nodemon integration for hot-reload during development
+- **Code Quality**: Pre-commit hooks with Husky, Lint-Staged, and Prettier for automated code formatting.
 
 ## Tech Stack
 
@@ -22,7 +24,11 @@ AI-powered resume analysis service that evaluates candidate resumes against job 
 - **HTTP Client**: `axios` 1.7.9 - LLM API calls
 - **Environment**: `dotenv` 17.2.3 - Environment variable management
 - **AI Model**: Google Gemini 2.5 Pro
-- **Testing**: Jest 29.7.0
+- **Testing**: Jest 29.7.0, Supertest
+- **Code Quality**:
+  - `husky` 3.1.11 - Git hooks management
+  - `lint-staged` - Run linters on staged files
+  - `prettier` - Code formatter
 - **Development**: Nodemon 3.1.11 - Auto-reload on file changes
 
 ## Prerequisites
@@ -54,6 +60,14 @@ GEMINI_ENDPOINT=https://generativelanguage.googleapis.com/v1beta/models/gemini-2
 GEMINI_API_KEY=your_actual_api_key_here
 MAX_FILE_SIZE_MB=10
 NODE_ENV=development
+
+# CV Improvement Suggestions (true/false)
+CV_IMPROVEMENT_SUGGESTIONS_ENABLED=true
+
+# LLM Configuration
+LLM_TEMPERATURE=0.1
+LLM_MAX_OUTPUT_TOKENS=16384
+LLM_TIMEOUT_MS=120000
 ```
 
 **Important**: Keep your `GEMINI_API_KEY` secure. Never commit it to version control.
@@ -100,17 +114,17 @@ curl -X POST http://localhost:3000/api/review-cv \
 ### Example with JavaScript/Fetch
 
 ```javascript
-const formData = new FormData();
-formData.append("cv", fileInput.files[0]);
-formData.append("job_description", jobDescriptionText);
+const formData = new FormData()
+formData.append('cv', fileInput.files[0])
+formData.append('job_description', jobDescriptionText)
 
-const response = await fetch("http://localhost:3000/api/review-cv", {
-  method: "POST",
+const response = await fetch('http://localhost:3000/api/review-cv', {
+  method: 'POST',
   body: formData,
-});
+})
 
-const result = await response.json();
-console.log("Overall Match:", result.scores.overall_match);
+const result = await response.json()
+console.log('Overall Match:', result.scores.overall_match)
 ```
 
 ### Response Format
@@ -165,6 +179,21 @@ console.log("Overall Match:", result.scores.overall_match);
     "recommendation": "yes",
     "parser_version": "1.0.0",
     "processing_time_ms": 3542
+  },
+  "cv_improvement_suggestions": {
+    "ats_friendliness": {
+      "is_ats_friendly": true,
+      "feedback": "The resume is well-structured and uses standard fonts and clear headings, making it easily parsable by Applicant Tracking Systems."
+    },
+    "impact_and_quantification": {
+      "before": "Managed a team of engineers to deliver new features.",
+      "after": "Led a team of 4 backend engineers to deliver 3 new microservices, resulting in a 15% reduction in API latency.",
+      "feedback": "Quantify your achievements with specific metrics (e.g., percentages, numbers, dollar amounts) to demonstrate the impact of your work. The 'after' example provides a much stronger statement of accomplishment."
+    },
+    "skill_relevance": {
+      "missing_keywords": ["Kubernetes", "Microservices"],
+      "feedback": "The resume could be strengthened by including keywords from the job description, such as 'Kubernetes' and 'Microservices', if you have experience with these technologies."
+    }
   }
 }
 ```
@@ -199,6 +228,12 @@ For watch mode during development:
 npm run test:watch
 ```
 
+For test coverage:
+
+```bash
+npm test -- --coverage
+```
+
 ## Project Structure
 
 ```
@@ -208,12 +243,22 @@ npm run test:watch
 │   └── review.js            # Main review endpoint
 ├── lib/
 │   ├── extract.js           # Text extraction (PDF, DOCX, TXT)
-│   ├── prompt.js            # LLM prompt template
+│   ├── prompt.js            # LLM prompt template assembly
 │   └── llm.js               # LLM API calls and JSON parsing
+├── prompts/                 # Directory for prompt templates
+│   ├── base-prompt.md
+│   ├── cv-improvement-guidance.md
+│   ├── ats-readiness-fields.txt
+│   └── cv-improvement-schema.txt
 ├── tests/
 │   ├── extract.test.js      # Text extraction tests
-│   └── parse.test.js        # JSON parsing tests
+│   ├── llm.test.js          # LLM and parsing tests
+│   ├── prompt.test.js       # Prompt generation tests
+│   └── review.test.js       # API endpoint tests
 ├── uploads/                 # Temporary file storage (auto-cleaned)
+├── .husky/                  # Husky pre-commit hooks
+│   └── pre-commit
+├── .prettierrc              # Prettier configuration
 ├── package.json
 ├── .env.example
 └── README.md
@@ -223,11 +268,11 @@ npm run test:watch
 
 ### Gemini API Configuration
 
-The service uses Gemini 2.5 Pro with the following settings:
+The service uses Gemini 2.5 Pro with settings now managed in the `.env` file:
 
-- **Temperature**: 0.0 (deterministic output for consistent parsing)
-- **Max Output Tokens**: 8192
-- **Timeout**: 60 seconds
+- **Temperature**: `LLM_TEMPERATURE` (default: 0.1 for deterministic but slightly creative output)
+- **Max Output Tokens**: `LLM_MAX_OUTPUT_TOKENS` (default: 16384)
+- **Timeout**: `LLM_TIMEOUT_MS` (default: 120 seconds)
 - **Authentication**: API key as query parameter
 
 To use a different Gemini model, update `GEMINI_ENDPOINT` in `.env`:

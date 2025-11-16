@@ -1,0 +1,16 @@
+"cv_improvement_suggestions": {
+"immediate_fixes": [
+  {
+    "issue": "specific problem found in CV",
+    "impact": "how this affects ATS/AI parsing",
+    "fix": "exact steps to fix it",
+    "example": "before and after example if applicable"
+  }
+  ],
+  "keyword_optimization": {
+    "missing_keywords": ["array of job-relevant keywords not found in CV"],
+    "how_to_add": "guidance on naturally incorporating these keywords"
+  },
+  "formatting_tips": ["array of 2-3 formatting improvements for better ATS parsing"],
+  "content_enhancements": ["array of 3-5 specific content improvements to strengthen match"]
+},
