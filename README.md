@@ -5,35 +5,35 @@ AI-powered resume analysis service that evaluates candidate resumes against job 
 ## Features
 
 - **Multi-format support**: PDF, DOCX, and TXT files (up to 10MB)
+- **TypeScript**: Fully typed codebase for better maintainability and developer experience.
 - **Structured analysis**: Returns JSON with detailed scores, evidence, strengths/weaknesses, and tailored interview questions
 - **Conditional CV Improvement**: Provides detailed, actionable suggestions for resume enhancement, which can be enabled or disabled.
 - **Gemini 2.5 Pro integration**: Uses latest Gemini AI model for intelligent resume evaluation
 - **Robust parsing**: Handles various response formats with automatic code fence removal
 - **Production-ready**: Complete error handling, input validation, and security best practices
-- **Development-friendly**: Nodemon integration for hot-reload during development
+- **Development-friendly**: Built-in watch mode for hot-reload during development
 - **Code Quality**: Pre-commit hooks with Husky, Lint-Staged, and Prettier for automated code formatting.
 
 ## Tech Stack
 
-- **Runtime**: Node.js 20.x+ (CommonJS)
+- **Runtime**: Bun
+- **Language**: TypeScript
 - **Framework**: Express 5.1.0
 - **File Processing**:
   - `pdf-parse` 2.4.5 - PDF text extraction
   - `mammoth` 1.8.0 - DOCX text extraction
   - `multer` 2.0.2 - File upload handling
-- **HTTP Client**: `axios` 1.7.9 - LLM API calls
 - **Environment**: `dotenv` 17.2.3 - Environment variable management
 - **AI Model**: Google Gemini 2.5 Pro
-- **Testing**: Jest 29.7.0, Supertest
+- **Testing**: Bun Test Runner, Supertest
 - **Code Quality**:
   - `husky` 3.1.11 - Git hooks management
   - `lint-staged` - Run linters on staged files
   - `prettier` - Code formatter
-- **Development**: Nodemon 3.1.11 - Auto-reload on file changes
 
 ## Prerequisites
 
-- Node.js 20.x or higher (recommended)
+- Bun 1.0 or higher
 - Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey)
 
 ## Setup
@@ -41,7 +41,7 @@ AI-powered resume analysis service that evaluates candidate resumes against job 
 ### 1. Install Dependencies
 
 ```bash
-npm install
+bun install
 ```
 
 ### 2. Configure Environment
@@ -77,13 +77,13 @@ LLM_TIMEOUT_MS=120000
 **Production:**
 
 ```bash
-npm start
+bun start
 ```
 
-**Development (with auto-reload using nodemon):**
+**Development (with auto-reload):**
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 The server will start on `http://localhost:3000`
@@ -93,7 +93,7 @@ The server will start on `http://localhost:3000`
 ### Endpoint
 
 ```
-POST /api/review-cv
+POST /review-cv
 ```
 
 ### Request Format
@@ -106,7 +106,7 @@ POST /api/review-cv
 ### Example with cURL
 
 ```bash
-curl -X POST http://localhost:3000/api/review-cv \
+curl -X POST http://localhost:3000/review-cv \
   -F "cv=@./path/to/resume.pdf" \
   -F "job_description=We are seeking a Senior Backend Engineer with 5+ years of Node.js experience..."
 ```
@@ -118,7 +118,7 @@ const formData = new FormData()
 formData.append('cv', fileInput.files[0])
 formData.append('job_description', jobDescriptionText)
 
-const response = await fetch('http://localhost:3000/api/review-cv', {
+const response = await fetch('http://localhost:3000/review-cv', {
   method: 'POST',
   body: formData,
 })
@@ -219,46 +219,55 @@ All scores are integers from 0-100.
 ## Running Tests
 
 ```bash
-npm test
+bun test
 ```
 
 For watch mode during development:
 
 ```bash
-npm run test:watch
+bun test --watch
 ```
 
 For test coverage:
 
 ```bash
-npm test -- --coverage
+bun test --coverage
 ```
+
+## Logging
+
+The service logs all token usage and errors to daily rotating files in the `logs/` directory. This is useful for monitoring costs and debugging issues. The logs are in JSON format and include the user's IP address and User-Agent.
 
 ## Project Structure
 
 ```
 .
-├── server.js                 # Express app entry point
+├── server.ts                 # Express app entry point
 ├── routes/
-│   └── review.js            # Main review endpoint
+│   └── review.ts            # Main review endpoint
 ├── lib/
-│   ├── extract.js           # Text extraction (PDF, DOCX, TXT)
-│   ├── prompt.js            # LLM prompt template assembly
-│   └── llm.js               # LLM API calls and JSON parsing
+│   ├── extract.ts           # Text extraction (PDF, DOCX, TXT)
+│   ├── prompt.ts            # LLM prompt template assembly
+│   ├── logger.ts            # Logging utility
+│   └── llm.ts               # LLM API calls and JSON parsing
 ├── prompts/                 # Directory for prompt templates
 │   ├── base-prompt.md
 │   ├── cv-improvement-guidance.md
 │   ├── ats-readiness-fields.txt
 │   └── cv-improvement-schema.txt
 ├── tests/
-│   ├── extract.test.js      # Text extraction tests
-│   ├── llm.test.js          # LLM and parsing tests
-│   ├── prompt.test.js       # Prompt generation tests
-│   └── review.test.js       # API endpoint tests
+│   ├── fixtures/
+│   │   ├── test.docx
+│   │   ├── test.pdf
+│   │   └── test.txt
+│   ├── extract.test.ts      # Text extraction tests
+│   ├── review.test.ts       # API endpoint tests
+│   └── server.test.ts       # Server health check tests
 ├── uploads/                 # Temporary file storage (auto-cleaned)
 ├── .husky/                  # Husky pre-commit hooks
 │   └── pre-commit
 ├── .prettierrc              # Prettier configuration
+├── tsconfig.json            # TypeScript configuration
 ├── package.json
 ├── .env.example
 └── README.md

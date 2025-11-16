@@ -1,7 +1,7 @@
-const fs = require('fs').promises
-const path = require('path')
-const { PDFParse } = require('pdf-parse')
-const mammoth = require('mammoth')
+import { promises as fs } from 'fs'
+import path from 'path'
+import { PDFParse } from 'pdf-parse'
+import mammoth from 'mammoth'
 
 /**
  * Extract text content from uploaded file based on file type
@@ -9,7 +9,7 @@ const mammoth = require('mammoth')
  * @returns {Promise<string>} - Extracted text content
  * @throws {Error} - If extraction fails or file type is unsupported
  */
-async function extractTextFromFile(filePath) {
+async function extractTextFromFile(filePath: string): Promise<string> {
   const ext = path.extname(filePath).toLowerCase()
 
   switch (ext) {
@@ -32,17 +32,18 @@ async function extractTextFromFile(filePath) {
  * @param {string} filePath - Path to PDF file
  * @returns {Promise<string>} - Extracted text
  */
-async function extractFromPDF(filePath) {
+async function extractFromPDF(filePath: string): Promise<string> {
   const dataBuffer = await fs.readFile(filePath)
-  const parser = new PDFParse({ data: dataBuffer })
-  const result = await parser.getText()
-  await parser.destroy()
+  // Convert Buffer to Uint8Array for pdf-parse
+  const uint8Array = new Uint8Array(dataBuffer)
+  const parser = new PDFParse(uint8Array)
+  const data = await parser.getText()
 
-  if (!result.text || result.text.trim().length === 0) {
+  if (!data.text || data.text.trim().length === 0) {
     throw new Error('PDF appears to be empty or contains only images')
   }
 
-  return result.text.trim()
+  return data.text.trim()
 }
 
 /**
@@ -50,7 +51,8 @@ async function extractFromPDF(filePath) {
  * @param {string} filePath - Path to DOCX file
  * @returns {Promise<string>} - Extracted text
  */
-async function extractFromDOCX(filePath) {
+async function extractFromDOCX(filePath: string): Promise<string> {
+  // mammoth expects path option for file system access
   const result = await mammoth.extractRawText({ path: filePath })
 
   if (!result.value || result.value.trim().length === 0) {
@@ -65,7 +67,7 @@ async function extractFromDOCX(filePath) {
  * @param {string} filePath - Path to TXT file
  * @returns {Promise<string>} - File contents
  */
-async function extractFromTXT(filePath) {
+async function extractFromTXT(filePath: string): Promise<string> {
   const content = await fs.readFile(filePath, 'utf-8')
 
   if (!content || content.trim().length === 0) {
@@ -79,17 +81,14 @@ async function extractFromTXT(filePath) {
  * Safely delete file, suppressing errors if file doesn't exist
  * @param {string} filePath - Path to file to delete
  */
-async function safeDeleteFile(filePath) {
+async function safeDeleteFile(filePath: string): Promise<void> {
   try {
     await fs.unlink(filePath)
-  } catch (error) {
+  } catch (error: any) {
     if (error.code !== 'ENOENT') {
       throw error
     }
   }
 }
 
-module.exports = {
-  extractTextFromFile,
-  safeDeleteFile,
-}
+export { extractTextFromFile, safeDeleteFile }

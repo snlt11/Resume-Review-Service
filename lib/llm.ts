@@ -1,17 +1,23 @@
-const axios = require('axios')
-const { logger } = require('./logger')
+import axios from 'axios'
+import { logger } from './logger'
+import { Request } from 'express'
+
+interface RequestMeta {
+  ip?: string
+  userAgent?: string
+}
 
 /**
  * Call LLM API with the constructed prompt
  * Uses environment variables for endpoint and API key
  * @param {string} prompt - Complete prompt text
- * @param {object} [req={}] - Optional Express request object for logging metadata
+ * @param {Request} [req] - Optional Express request object for logging metadata
  * @returns {Promise<string>} - Raw LLM response text
  * @throws {Error} - If API call fails
  */
-async function callLLM(prompt, req = {}) {
+async function callLLM(prompt: string, req: Request): Promise<string> {
   const ip = req.ip
-  const userAgent = req.get ? req.get('User-Agent') : null
+  const userAgent = req.get ? req.get('User-Agent') : undefined
   const endpoint = process.env.GEMINI_ENDPOINT
   const apiKey = process.env.GEMINI_API_KEY
 
@@ -62,6 +68,7 @@ async function callLLM(prompt, req = {}) {
       throw new Error('LLM returned empty response')
     }
 
+    // Log token usage and request metadata
     if (response.data && response.data.usageMetadata) {
       const usage = response.data.usageMetadata
       const inputTokens = usage.promptTokenCount || 0
@@ -85,7 +92,7 @@ async function callLLM(prompt, req = {}) {
     }
 
     return responseText
-  } catch (error) {
+  } catch (error: any) {
     logger({
       type: 'llm_error',
       ip,
@@ -113,10 +120,10 @@ async function callLLM(prompt, req = {}) {
  * Parse LLM response into JSON, handling various response formats
  * Strips code fences and attempts multiple parsing strategies
  * @param {string} rawResponse - Raw text from LLM
- * @returns {Object} - Parsed JSON object
+ * @returns {object} - Parsed JSON object
  * @throws {Error} - If parsing fails after all attempts
  */
-function parseLLMJson(rawResponse) {
+function parseLLMJson(rawResponse: string): object {
   let cleanedResponse = rawResponse.trim()
 
   if (cleanedResponse.startsWith('```')) {
@@ -133,17 +140,17 @@ function parseLLMJson(rawResponse) {
 
   try {
     return JSON.parse(cleanedResponse)
-  } catch (error) {
+  } catch (error: any) {
     throw new Error(`Failed to parse LLM JSON response: ${error.message}`)
   }
 }
 
 /**
  * Validate that parsed JSON contains expected resume review structure
- * @param {Object} parsed - Parsed JSON object
+ * @param {object} parsed - Parsed JSON object
  * @returns {boolean} - True if valid structure
  */
-function validateResumeStructure(parsed) {
+function validateResumeStructure(parsed: any): boolean {
   const baseRequiredFields = [
     'candidate',
     'evidence',
@@ -176,8 +183,4 @@ function validateResumeStructure(parsed) {
   return true
 }
 
-module.exports = {
-  callLLM,
-  parseLLMJson,
-  validateResumeStructure,
-}
+export { callLLM, parseLLMJson, validateResumeStructure }

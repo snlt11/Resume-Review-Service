@@ -1,5 +1,5 @@
-const fs = require('fs').promises
-const path = require('path')
+import { promises as fs } from 'fs'
+import path from 'path'
 
 const logsDir = path.join(__dirname, '..', 'logs')
 
@@ -11,7 +11,17 @@ async function initialize() {
   }
 }
 
-async function logger(data) {
+interface LogData {
+  type: string
+  ip?: string
+  userAgent?: string
+  model?: string
+  usage?: unknown
+  error?: unknown
+  [key: string]: any
+}
+
+async function logger(data: LogData): Promise<void> {
   const date = new Date().toISOString().split('T')[0]
   const logFile = path.join(logsDir, `${date}.log`)
   const logEntry = JSON.stringify({
@@ -28,4 +38,4 @@ async function logger(data) {
 
 initialize()
 
-module.exports = { logger }
+export { logger }
