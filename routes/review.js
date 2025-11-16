@@ -102,7 +102,7 @@ router.post('/review-cv', upload.single('cv'), async (req, res) => {
 
     let rawLLMResponse
     try {
-      rawLLMResponse = await callLLM(prompt)
+      rawLLMResponse = await callLLM(prompt, req)
     } catch (llmError) {
       await safeDeleteFile(uploadedFilePath)
       return res.status(502).json({
