@@ -8,7 +8,7 @@ AI-powered resume analysis service that evaluates candidate resumes against job 
 - **TypeScript**: Fully typed codebase for better maintainability and developer experience.
 - **Structured analysis**: Returns JSON with detailed scores, evidence, strengths/weaknesses, and tailored interview questions
 - **Conditional CV Improvement**: Provides detailed, actionable suggestions for resume enhancement, which can be enabled or disabled.
-- **Gemini 2.5 Pro integration**: Uses latest Gemini AI model for intelligent resume evaluation
+- **Gemini 3 Pro integration**: Uses latest Gemini AI model for intelligent resume evaluation
 - **Robust parsing**: Handles various response formats with automatic code fence removal
 - **Production-ready**: Complete error handling, input validation, and security best practices
 - **Development-friendly**: Built-in watch mode for hot-reload during development
@@ -24,7 +24,7 @@ AI-powered resume analysis service that evaluates candidate resumes against job 
   - `mammoth` 1.8.0 - DOCX text extraction
   - `multer` 2.0.2 - File upload handling
 - **Environment**: `dotenv` 17.2.3 - Environment variable management
-- **AI Model**: Google Gemini 2.5 Pro
+- **AI Model**: Google Gemini 3 Pro
 - **Testing**: Bun Test Runner, Supertest
 - **Code Quality**:
   - `husky` 3.1.11 - Git hooks management
@@ -93,7 +93,7 @@ The server will start on `http://localhost:3000`
 ### Endpoint
 
 ```
-POST /review-cv
+POST /api/review-cv
 ```
 
 ### Request Format
@@ -106,7 +106,7 @@ POST /review-cv
 ### Example with cURL
 
 ```bash
-curl -X POST http://localhost:3000/review-cv \
+curl -X POST http://localhost:3000/api/review-cv \
   -F "cv=@./path/to/resume.pdf" \
   -F "job_description=We are seeking a Senior Backend Engineer with 5+ years of Node.js experience..."
 ```
@@ -118,7 +118,7 @@ const formData = new FormData()
 formData.append('cv', fileInput.files[0])
 formData.append('job_description', jobDescriptionText)
 
-const response = await fetch('http://localhost:3000/review-cv', {
+const response = await fetch('http://localhost:3000/api/review-cv', {
   method: 'POST',
   body: formData,
 })
@@ -277,7 +277,7 @@ The service logs all token usage and errors to daily rotating files in the `logs
 
 ### Gemini API Configuration
 
-The service uses Gemini 2.5 Pro with settings now managed in the `.env` file:
+The service uses Gemini 3 Pro with settings now managed in the `.env` file:
 
 - **Temperature**: `LLM_TEMPERATURE` (default: 0.1 for deterministic but slightly creative output)
 - **Max Output Tokens**: `LLM_MAX_OUTPUT_TOKENS` (default: 16384)
@@ -290,8 +290,8 @@ To use a different Gemini model, update `GEMINI_ENDPOINT` in `.env`:
 # For Gemini 2.0 Flash (faster, cheaper)
 GEMINI_ENDPOINT=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent
 
-# For Gemini 2.5 Pro (more accurate)
-GEMINI_ENDPOINT=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent
+# For Gemini 3 Pro (more accurate)
+GEMINI_ENDPOINT=https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent
 ```
 
 ### Token Limits
