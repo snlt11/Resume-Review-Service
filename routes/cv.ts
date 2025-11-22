@@ -1,12 +1,22 @@
 import express, { Request, Response, NextFunction } from 'express'
+import rateLimit from 'express-rate-limit'
 import multer from 'multer'
 import path from 'path'
 import { extractTextFromFile, safeDeleteFile } from '../lib/extract'
 import { buildPrompt } from '../lib/prompt'
 import { callLLM, parseLLMJson, validateResumeStructure } from '../lib/llm'
-import { processCV } from '../lib/async/asyncProcessor'
+import { logger } from '../lib/logger'
+import { processCV } from '../lib/jobs/cvProcessor'
 
 const router = express.Router()
+
+// Rate limiting
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 1, // limit each IP to 1 request per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+})
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -65,6 +75,7 @@ const upload = multer({
  */
 router.post(
   '/review-cv',
+  apiLimiter,
   upload.single('cv'),
   async (req: Request, res: Response) => {
     const startTime = Date.now()
@@ -187,10 +198,15 @@ const verifySecret = (req: Request, res: Response, next: NextFunction) => {
   next()
 }
 
-router.post('/process-cv', verifySecret, (req: Request, res: Response) => {
-  const { job_id, file_url, user_id, job_description } = req.body
-  res.status(200).json({ message: 'Job received, processing in background' })
-  processCV(job_id, file_url, user_id, job_description)
-})
+router.post(
+  '/process-cv',
+  apiLimiter,
+  verifySecret,
+  (req: Request, res: Response) => {
+    const { job_id, file_url, user_id, job_description } = req.body
+    res.status(200).json({ message: 'Job received, processing in background' })
+    processCV(job_id, file_url, user_id, job_description)
+  }
+)
 
 export default router

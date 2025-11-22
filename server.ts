@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import express, { Request, Response, NextFunction } from 'express'
-import reviewRouter from './routes/review'
+import cvRouter from './routes/cv'
+import webhookRouter from './routes/webhookHandler'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -15,7 +16,8 @@ app.get('/health', (req: Request, res: Response) => {
 })
 
 // API routes
-app.use('/api', reviewRouter)
+app.use('/api', cvRouter)
+app.use('/api/webhook', webhookRouter)
 
 // 404 handler
 app.use((req: Request, res: Response) => {

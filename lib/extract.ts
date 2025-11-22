@@ -1,7 +1,24 @@
 import { promises as fs } from 'fs'
 import path from 'path'
-import { PDFParse } from 'pdf-parse'
+import { PDFExtract } from 'pdf.js-extract'
 import mammoth from 'mammoth'
+import axios from 'axios'
+
+export async function extractTextFromUrl(fileUrl: string): Promise<string> {
+  const response = await axios.get(fileUrl, { responseType: 'arraybuffer' })
+  const buffer = Buffer.from(response.data)
+  const ext = path.extname(fileUrl).toLowerCase()
+  const tempFilePath = path.join(
+    __dirname,
+    '..',
+    'uploads',
+    `${Date.now()}${ext}`
+  )
+  await fs.writeFile(tempFilePath, buffer)
+  const text = await extractTextFromFile(tempFilePath)
+  await fs.unlink(tempFilePath)
+  return text
+}
 
 /**
  * Extract text content from uploaded file based on file type
@@ -16,8 +33,13 @@ async function extractTextFromFile(filePath: string): Promise<string> {
     case '.pdf':
       return await extractFromPDF(filePath)
 
-    case '.docx':
-      return await extractFromDOCX(filePath)
+    case '.docx': {
+      const { value } = await mammoth.extractRawText({ path: filePath })
+      if (!value || value.trim().length === 0) {
+        throw new Error('DOCX file is empty or contains no text')
+      }
+      return value.trim()
+    }
 
     case '.txt':
       return await extractFromTXT(filePath)
@@ -33,39 +55,17 @@ async function extractTextFromFile(filePath: string): Promise<string> {
  * @returns {Promise<string>} - Extracted text
  */
 async function extractFromPDF(filePath: string): Promise<string> {
-  const dataBuffer = await fs.readFile(filePath)
-  // Convert Buffer to Uint8Array for pdf-parse
-  const uint8Array = new Uint8Array(dataBuffer)
-  const parser = new PDFParse(uint8Array)
-  const data = await parser.getText()
-
-  if (!data.text || data.text.trim().length === 0) {
-    throw new Error('PDF appears to be empty or contains only images')
-  }
-
-  return data.text.trim()
+  const pdfExtract = new PDFExtract()
+  const data = await pdfExtract.extract(filePath, {})
+  return data.pages
+    .map((page: any) => page.content.map((item: any) => item.str).join(' '))
+    .join('\n')
 }
 
 /**
- * Extract text from DOCX file using mammoth
- * @param {string} filePath - Path to DOCX file
- * @returns {Promise<string>} - Extracted text
- */
-async function extractFromDOCX(filePath: string): Promise<string> {
-  // mammoth expects path option for file system access
-  const result = await mammoth.extractRawText({ path: filePath })
-
-  if (!result.value || result.value.trim().length === 0) {
-    throw new Error('DOCX file appears to be empty')
-  }
-
-  return result.value.trim()
-}
-
-/**
- * Extract text from plain text file
- * @param {string} filePath - Path to TXT file
- * @returns {Promise<string>} - File contents
+ * Extracts text from a .txt file
+ * @param {string} filePath - Path to the .txt file
+ * @returns {Promise<string>} - Extracted text content
  */
 async function extractFromTXT(filePath: string): Promise<string> {
   const content = await fs.readFile(filePath, 'utf-8')

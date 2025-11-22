@@ -10,6 +10,8 @@ AI-powered resume analysis service that evaluates candidate resumes against job 
 - **Conditional CV Improvement**: Provides detailed, actionable suggestions for resume enhancement, which can be enabled or disabled.
 - **Gemini 3 Pro integration**: Uses latest Gemini AI model for intelligent resume evaluation
 - **Robust parsing**: Handles various response formats with automatic code fence removal
+- **Asynchronous Processing**: Supports asynchronous CV processing via webhooks for integration with other services.
+- **Rate Limiting**: Protects the API from abuse by limiting requests to 1 per minute per IP.
 - **Production-ready**: Complete error handling, input validation, and security best practices
 - **Development-friendly**: Built-in watch mode for hot-reload during development
 - **Code Quality**: Pre-commit hooks with Husky, Lint-Staged, and Prettier for automated code formatting.
@@ -20,9 +22,11 @@ AI-powered resume analysis service that evaluates candidate resumes against job 
 - **Language**: TypeScript
 - **Framework**: Express 5.1.0
 - **File Processing**:
-  - `pdf-parse` 2.4.5 - PDF text extraction
+  - `pdf.js-extract` - PDF text extraction
   - `mammoth` 1.8.0 - DOCX text extraction
   - `multer` 2.0.2 - File upload handling
+- **Security**:
+  - `express-rate-limit` - Middleware for rate limiting API requests
 - **Environment**: `dotenv` 17.2.3 - Environment variable management
 - **AI Model**: Google Gemini 3 Pro
 - **Testing**: Bun Test Runner, Supertest
@@ -61,6 +65,10 @@ GEMINI_API_KEY=your_actual_api_key_here
 MAX_FILE_SIZE_MB=10
 NODE_ENV=development
 
+# Webhook configuration for async processing
+WEBHOOK_URL=http://your-laravel-app.com/api/webhook/cv-result
+NODE_SERVICE_SECRET=a_secure_random_string
+
 # CV Improvement Suggestions (true/false)
 CV_IMPROVEMENT_SUGGESTIONS_ENABLED=true
 
@@ -90,20 +98,43 @@ The server will start on `http://localhost:3000`
 
 ## API Usage
 
-### Endpoint
+The service offers two primary endpoints for CV analysis. **Note:** The API is rate-limited to 1 request per minute per IP address.
+
+### Synchronous Endpoint
+
+This endpoint is for direct, real-time analysis of a CV.
 
 ```
 POST /api/review-cv
 ```
 
-### Request Format
+### Asynchronous Endpoint
+
+This endpoint is designed for integration with other services, like a web application, where you want to process a CV in the background.
+
+```
+POST /api/process-cv
+```
+
+### Request Format (`/api/review-cv`)
 
 - **Content-Type**: `multipart/form-data`
 - **Fields**:
   - `cv` (file, required): Resume file (.pdf, .docx, or .txt, max 10MB)
   - `job_description` (text, required): Job description text
 
-### Example with cURL
+### Request Format (`/api/process-cv`)
+
+- **Content-Type**: `application/json`
+- **Headers**:
+  - `X-Internal-Secret`: The shared secret configured in the `.env` file.
+- **Body**:
+  - `job_id` (string, required): A unique identifier for the job.
+  - `file_url` (string, required): The URL of the CV file to be processed.
+  - `user_id` (string, required): The ID of the user who initiated the request.
+  - `job_description` (text, required): Job description text
+
+### Example with cURL (`/api/review-cv`)
 
 ```bash
 curl -X POST http://localhost:3000/api/review-cv \
@@ -205,6 +236,37 @@ console.log('Overall Match:', result.scores.overall_match)
 - `502 Bad Gateway`: LLM API failure or invalid JSON response
 - `500 Internal Server Error`: Unexpected server error
 
+### Asynchronous Endpoint
+
+```
+POST /api/process-cv
+```
+
+### Request Format
+
+- **Content-Type**: `application/json`
+- **Headers**:
+  - `X-Internal-Secret`: The shared secret configured in the `.env` file.
+- **Body**:
+  - `job_id` (string, required): A unique identifier for the job.
+  - `file_url` (string, required): The URL of the CV file to be processed.
+  - `user_id` (string, required): The ID of the user who initiated the request.
+  - `job_description` (text, required): Job description text
+
+### Example with cURL
+
+```bash
+curl -X POST http://localhost:3000/api/process-cv \
+  -H "Content-Type: application/json" \
+  -H "X-Internal-Secret: your_secure_secret" \
+  -d '{
+    "job_id": "12345",
+    "file_url": "http://example.com/path/to/resume.pdf",
+    "user_id": "user_abc",
+    "job_description": "We are seeking a Senior Backend Engineer with 5+ years of Node.js experience..."
+  }'
+```
+
 ## Scoring System
 
 The service uses a weighted scoring model:
@@ -244,12 +306,15 @@ The service logs all token usage and errors to daily rotating files in the `logs
 .
 ├── server.ts                 # Express app entry point
 ├── routes/
-│   └── review.ts            # Main review endpoint
+│   ├── cv.ts                # Defines all CV-related endpoints
+│   └── webhookHandler.ts    # Handles incoming webhooks
 ├── lib/
 │   ├── extract.ts           # Text extraction (PDF, DOCX, TXT)
 │   ├── prompt.ts            # LLM prompt template assembly
 │   ├── logger.ts            # Logging utility
-│   └── llm.ts               # LLM API calls and JSON parsing
+│   ├── llm.ts               # LLM API calls and JSON parsing
+│   └── jobs/
+│       └── cvProcessor.ts   # Logic for async CV processing and webhooks
 ├── prompts/                 # Directory for prompt templates
 │   ├── base-prompt.md
 │   ├── cv-improvement-guidance.md
